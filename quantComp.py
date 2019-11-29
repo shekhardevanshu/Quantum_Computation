@@ -110,6 +110,7 @@ def genCGate(N,M,a,b):
         l = []
         for j in range(2**N):
             x, y = int2bin(N,i), int2bin(N,j)
+            # print(a-1, b-1)
             l.append(Cgate[int(x[a-1]+x[b-1], 2), int(y[a-1]+y[b-1], 2)])
             for p in range(len(x)):
                 if p != a-1 and p != b-1:       

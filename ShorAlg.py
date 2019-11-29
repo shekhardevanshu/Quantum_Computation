@@ -52,7 +52,22 @@ def QunatumShor(C):
         if gcd(g,N) != 1:
             return(gcd(g,N), N // gcd(g,N))
         else:
-    #gate operations
+        #QFT
+            def QFT(L, i=1):
+            # Remember: non-default argument(L) mustn't follow default arguments(i)
+                if i == L:
+                    return(gate.Hadamard(i))
+                qft = gate.Hadamard(i)
+                for j in range(i,L):
+                    n = (1/2)**j
+                    phase = gate.phase(n)
+                    print(phase)
+                    # print(i,j)
+                    qft = np.matmul(qft, qp.genCGate(N,phase,i,j+1))
+                i += 1
+                return(np.matmul(qft, QFT(L,i)))
+
+        #gate operations
             gate = qp.QGates(N)
             for i in range(L):
                 # print(gate.Hadamard(L-i).shape, psi.shape)
@@ -76,9 +91,9 @@ def QunatumShor(C):
                             D[i, int(cl+fb,2)] = 1
                 k += 1
             psi = np.matmul(D, psi)
-            print(D)
-        #QFT
-            
+            # print(D)
+            print(QFT(L))
+        
             break
 
 
