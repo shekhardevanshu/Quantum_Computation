@@ -12,7 +12,7 @@ def gcd(m,n):
         else: m,n = n%m, m
 def PerfectSquare(N):
     sq = sqrt(N)
-    if int(sq + 0.1)**2 == N: 
+    if int(sq + 0.5)**2 == N:
         return(True)
     else: return(False)
 
@@ -45,10 +45,12 @@ def QunatumShor(C):
     l1 = [0]*2**N
     l1[1] = 1
     psi = np.matrix(l1).transpose()
+    # print(psi)
     l = list(range(2,C))
     while True:
         g = random.choice(l)
-        # print(g)
+        # g = 2
+        print(g)
         if gcd(g,N) != 1:
             return(gcd(g,N), N // gcd(g,N))
         else:
@@ -61,7 +63,7 @@ def QunatumShor(C):
                 for j in range(i,L):
                     n = (1/2)**j
                     phase = gate.phase(n)
-                    print(phase)
+                    # print(phase)
                     # print(i,j)
                     qft = np.matmul(qft, qp.genCGate(N,phase,i,j+1))
                 i += 1
@@ -73,26 +75,46 @@ def QunatumShor(C):
                 # print(gate.Hadamard(L-i).shape, psi.shape)
                 psi = np.matmul(gate.Hadamard(L-i), psi)
             D = np.zeros([2**N, 2**N])
-            A = [(g**(2**i))%C for i in range(L)]
+            A = [(g**(2**i)) for i in range(L)]
             # print(A)
             k = 0
             while(k<L):
-                for i in range(2**L):
-                    for j in range(2**L)   :
-                        c = qp.int2bin(N,j)
-                        cl, f = c[0:L], int(c[L:], 2)
-                        if cl[L-1-k] == 0: D[i,j] = 1
-                        elif cl[L-1-k] == 1 and f >= C: D[i,j] = 1
-                        else:
+                for j in range(2**N):   #jth column
+                    c = qp.int2bin(N,j)
+                    cl, f = c[0:L], int(c[L:], 2) 
+                    # print(c, j, f)
+                    for i in range(2**N)   : #ith row              
+                       
+                        if cl[L-1-k] == '0':
+                            i = j
+                            D[i,j] = 1
+                            break
+                        elif cl[L-1-k] == '1' and f >= C:
+                            # print(f)
+                            i = j
+                            D[i,j] = 1
+                            break
+                        elif cl[L-1-k] == '1' and f < C:
                             # print(f)
                             f *= A[k]
-                            
-                            fb = qp.int2bin(N,f)
-                            D[i, int(cl+fb,2)] = 1
+                            f = f%C
+                            # print(f)
+                            fb = qp.int2bin(M,f)
+                            # print(f, fb)
+                            i = int(cl+fb, 2)
+                            # print(i, cl+fb)
+                            D[i, j] = 1
+                            # print(i,D[i,j])
+                            break
+                    # if D[i,j] != 0:
+                        # print(D[i,j], (i,j))
+                # print(D @ D.transpose())
                 k += 1
             psi = np.matmul(D, psi)
-            # print(D)
-            print(QFT(L))
+            # print(psi)
+            # print(D @ D.transpose())
+            # print(np.matmul(QFT(L), psi))
+            print(qp.measurement(psi, N))
         
             break
 
