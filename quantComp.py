@@ -3,7 +3,7 @@
 # Date: 2/10/19
 
 import random
-from math import sqrt, log
+from math import sqrt, log, log2
 from cmath import exp, pi
 import numpy as np
 # import matplotlib.pyplot as plt
@@ -21,14 +21,63 @@ class QGates():
         if i == j: return(1)
         else: return(0)
 
-    def tensorMult(self,M,i):
-        l = []
-        for j in range(self.n):
-            l.append(M) if j == i-1 else l.append(self.I)     
-        x = l[0]
-        for k in range(1,len(l)):
-            x = np.kron(x,l[k])
-        return(x)
+    '''def DtensorMult(self,M,a):
+        genM = []
+        n = self.n
+        for i in range(2**n):
+            l = []
+            for j in range(2**n):
+                x,y = int2bin(n, i), int2bin(n, j)
+                m = 1
+                for q in range(n):
+                    if q == a-1: m *= M[int(x[q]),int(y[q])]
+                    else: m *= self.delta(int(x[q]),int(y[q]))
+                    # print(q, j, int(x[q]),int(y[q]))
+                print(i, j, m)
+                l.append(m)
+            genM.append(l)
+        return(np.matrix(genM))'''
+
+    def tensorMult(self,M,a):
+        n = self.n
+        N = 2 ** n
+        genM = np.asmatrix(np.zeros((N, N), dtype=np.float16))
+        # genM = [[0.0] * N] * N
+        # print(genM)
+        for i in range(N):
+            # l = []
+            for j in [i, min(i + (2 ** (n - a)), N - 1)]:
+                # x,y = int2bin(n, i), int2bin(n, j)
+                x, y = i, j
+                b_x = (x >> (n - a)) & 1
+                b_y = (y >> (n - a)) & 1
+                m = M[b_x, b_y]
+
+                # for c in range(1, n + 1):
+                #     d = z & 1
+                #     b_x = x & 1
+                #     b_y = y & 1
+                #     if c == n - a + 1:
+                #         m *= M[b_x, b_y]
+                #     else:
+                #         m *= int(not d)
+                #         if d == 1:
+                #             break
+                #     z >>= 1
+                #     x >>= 1
+                #     y >>= 1
+
+                '''for q in range(n):
+                    if q == a-1: m *= M[int(x[q]),int(y[q])]
+                    else: m *= self.delta(int(x[q]),int(y[q]))'''
+                    # print(q, j, int(x[q]),int(y[q]))
+                # print(m)
+                genM[i,j] = m
+                genM[j,i] = m
+                # print(i, j, m)
+                # print(genM)
+        # return np.matrix(genM)
+        return genM
 
     def Hadamard(self, i):
         return(self.tensorMult(self.H,i))
@@ -50,7 +99,7 @@ class QGates():
 
 def int2bin(N,n):
     l = [0]*N
-    i = 0
+    i = N
     while(True):
         l[i-1] = n%2
         n = n//2
@@ -94,7 +143,7 @@ def measurement(psiOrig, N):
                 break
             q += psi[j+1]**2
 
-        inp = int(input("Eneter \n 1. Measure same state \n 2. Restart measurement \n 3. exit \n"))
+        inp = int(input("Enter \n 1. Measure same state \n 2. Restart measurement \n 3. exit \n"))
         if inp == 1:
             psi = [0]*len(psi)
             psi[state] = 1
@@ -139,11 +188,12 @@ def fullQuntumComp():
 
     measurement(psi, N)
 
-def QuantuMeasure():
-    psi, N = initialize()
-    numMeas = int(input("How many measurements: "))
+def QuantuMeasure(psi, numMeas):
+    # psi, N = initialize()
+    # numMeas = int(input("How many measurements: "))
+    N = int(log2(len(psi)))
     collapsedState = []
-    cnt = {}
+    # cnt = {}
 
     for _ in range(numMeas):
         r = random.random()
@@ -159,10 +209,10 @@ def QuantuMeasure():
                 # print('|'+int2bin(N,j)+">\n")
                 break
             q += psi[j+1]**2
-
-    for st in collapsedState:
-        cnt[st] = cnt.get(st, 0) + 1
-    print(cnt)
+    return(collapsedState)
+    # for st in collapsedState:
+        # cnt[st] = cnt.get(st, 0) + 1
+    # print(cnt)
     # plt.hist(cnt)
     # plt.show()
 
@@ -177,11 +227,17 @@ if __name__ == '__main__':
     # print(psi)
     # print(np.shape(psi))
     # measurement(psi)
-    gate = QGates(2)
+    gate = QGates(3)
+    h = gate.Hadamard(2)
+    print(h)
+    # for i in h:
+    #     for j in i:
+    #         print(j , end=" ")
+    #     print()
     # print(gate.CNOT[0,0])
-    N = gate.phase(theta = 1)
+    # N = gate.phase(theta = 1)
     # print(N)
-    print(genCGate(2,N,2,1))
+    # print(genCGate(2,N,2,1))
     # print(np.shape(H))
     # P = gate.phase(3,1)
     # print(P)
