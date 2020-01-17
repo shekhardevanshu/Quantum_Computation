@@ -50,7 +50,8 @@ def intialize(C):
         return(int(sqrt(C)), int(sqrt(C)))
     # L is qubits in x register and M is for f register
     # L, M = ceil(2 * log2(C)), ceil(log2(C))
-    L, M = 3, 4
+    # L, M = 3, 4  # for C = 15
+    L, M = 6, 6  # for C = 39
     # print(L, M)
     N = L + M  # total number of qubits
 
@@ -62,51 +63,53 @@ def intialize(C):
 
 
 # QFT
-def QFT(N, L, i=1):
+'''def QFT(N, L, i=1):
     # Remember: non-default argument(L) mustn't follow default arguments(i)
     print('qft')
     gate = qp.QGates(N)
     if i == L:
         return(gate.Hadamard(i))
     qft = gate.Hadamard(i)
+    n = 1
     for j in range(i, L):
-        n = (1 / 2)**j
+        n *= 0.5
+        # print(n)
         phase = gate.phase(n)
         # print(phase)
         # print(j)
-        qft = qft @ qp.genCGate(N, phase, i, j + 1)
+        qft = qft @ qp.CphaseGate(N, phase, i, j + 1)
     i += 1
     # print(i)
     return qft @ QFT(N, L, i)
 
-# gate operations
+# gate operations'''
 
 
-def QFTItr(N, L):
-    print('QFTItr')
+def QFT(N, L):
+
+    print('QFT')
     gate = qp.QGates(N)
     a = gate.Hadamard(L)
-    for i in range(1, L):
-        print(i)
+    for i in range(L-1, 0, -1):
+        # print(i)
         qft = gate.Hadamard(i)
         n = 1
         for j in range(i, L):
             n *= 0.5
             phase = gate.phase(n)
-            qft = qft @ qp.genCGate(N, phase, i, j + 1)
-        a = qft @ a
+            qft = qp.CphaseGate(N, phase, i, j + 1) @ qft
+        a = a @ qft
 
     return a
 
 
 def gateOperations(C, L, M, g):
+    # print(C, g)
     print('gateOperations')
     N = L + M
     NN = 2**N
     MM = 2**M
     # LL = 2**L
-    # ds = []
-    # D = np.zeros([2**N, 2**N])
     D = coo_matrix(np.eye(NN))
     # print(D)
     data = np.ones(NN)
@@ -115,16 +118,10 @@ def gateOperations(C, L, M, g):
     k = 0
     while(k < L):
         row, col = [], []
-        # print(M+k)
         for j in range(NN):  # jth column
-            # c = qp.int2bin(N,j)
-            # cl, f1 = c[0:L], int(c[L:], 2)
-            # print(c, j, f)
 
             f = j % MM
             y = j
-            # print(f, f1)
-            # ds.append((j >> (M + k)) & 1)
             if (y >> (M + k)) & 1 == 0:
                 i = j
                 # D[i,j] = 1
@@ -133,37 +130,18 @@ def gateOperations(C, L, M, g):
                 # data.append(1)
 
             elif (y >> (M + k)) & 1 == 1 and f >= C:
-                # print(f)
                 i = j
-                # D[i,j] = 1
                 row.append(i)
                 col.append(j)
-                # data.append(1)
-                # break
             elif (y >> (M + k)) & 1 == 1 and f < C:
                 # print(f)
                 f *= A[k]
                 f %= C
-                # print(f)
-                # fb = qp.int2bin(M,f)
-                # cl = ''
-                # for v in range(L):
-                # c = cl
-                # cl = str((j >> M+v) & 1) + c
-                # i = int(cl + fb, 2)
                 cl = j // MM
                 i = cl * MM + f
                 # print(i, i1)
                 row.append(i)
                 col.append(j)
-                # data.append(1)
-                # print(i, cl+fb)
-                # D[i, j] = 1
-                # print(i,D[i,j])
-                # break
-        # print(len(row), len(col), len(data))
-        # print(D.shape)
-        # print(ds)
         d = coo_matrix((data, (row, col)), shape=(NN, NN))
         # print(d)
         # exit()
@@ -172,37 +150,69 @@ def gateOperations(C, L, M, g):
 
     return(D)
 
-    # print(psi)
-    # print(D @ D.transpose())
-    # print(np.matmul(QFT(L), psi))
-    # print(qp.QuantuMeasure(psi, 10))
 
-
-def measurement(N, psi, L):
+def measurement(N, psi, L, g, C):
     print('measurement')
-    Mesured_states = qp.QuantuMeasure(N, psi, 10)
+    Mesured_states = qp.QuantuMeasure(N, psi, 100)
     # print(psi)
     X = []
     P = []
+    F = []
+    LL = 2**L
     for state in Mesured_states:
         # print(state)
         s = state[L:0:-1]
         # print(s)
-        x = Fraction(int(s, 2) / 2**L).limit_denominator()
-        # print(x)
-        X.append(int(s, 2) / 2**L)
+        # print(state[L+1:-1])
+        f = int(state[L+1:-1], 2)
+        if f not in F:
+            F.append(f)
+        x = Fraction(int(s, 2) / LL)
+        # print(int(s, 2))
+        X.append(int(s, 2) / LL)
         P.append(x.denominator)
-    cnt = {}
+    cnt1, cnt2 = {}, {}
     # print(X)
-    for i in X:
-        cnt[i] = cnt.get(i, 0) + 1
+    # print(F)
+    for i, j in zip(X, P):
+        cnt1[i] = cnt1.get(i, 0) + 1
+        cnt2[j] = cnt2.get(j, 0) + 1
+    '''i = 2
+    while i <= 5:
+        print(i)
+        for p in P:
+            if (g ** p) % C == 1:
+                return p
+        P = list(map(lambda x: i*x, P))
+        i += 1'''
+
     # print(P)
-    # print(cnt)
-    try:
-        p = mode(P)
-        return(p)
-    except:
-        measurement(N, psi, L)
+    print(cnt1)
+    print(cnt2)
+    exit()
+    # print(cnt2)
+    # try:
+    # p = mode(P)
+    # except:
+    # measurement(N, psi, L)
+    '''for k in F:
+        # print(mode(P))
+        cnt2 = {}
+        if mode(P) in F:
+            return(mode(P))
+        else:
+            if k == 1:
+                continue
+            for i, j in enumerate(P):
+                # print(i, j)
+                if j != 1 and j < k and k % j == 0:
+                    # print(k)
+                    P[i] = k
+        for h in P:
+            cnt2[h] = cnt2.get(h, 0) + 1
+        print(cnt2)'''
+    # if mode(P) in F:
+    # return(mode(p))
 
 
 '''def frac(x):
@@ -212,46 +222,52 @@ def measurement(N, psi, L):
     N, D = x, 10**n
     g = gcd(N, D)
     while g != 1:
-        N /= g
-        D /= g
+        N //= g
+        D //= g
         g = gcd(N, D)
     return(str(int(N))+'/'+str(int(D)))'''
 
 
 def QunatumShor(C):
     psi, L, M, N = intialize(C)
-    psi = coo_matrix(psi)
-    # print(psi)
+    # psi = coo_matrix(psi)
+    # print(psi.todense())
+    # exit()
     gate = qp.QGates(N)
     for i in range(L):
         psi = gate.Hadamard(L - i) @ psi
     # print(psi)
     # exit()
-    # l = list(range(2, C))
-    # g = random.choice(l)
-    g = 7
-    # print(g)
-    if gcd(g, C) != 1:
-        return(gcd(g, C), C // gcd(g, C))
-    D = gateOperations(C, L, M, g)
-    # print(D.todense())
-    # exit()
-    psi = D @ psi
-    # print(coo_matrix(psi))
-    qft = QFTItr(N, L)
-    psi = qft @ psi
-    # print(len(psi))
-    # exit()
     while True:
-        p = measurement(N, psi.todense(), L)
+        # l = list(range(2, C))
+        # g = random.choice(l)
+        g = 10
+        # print(g)
+        if gcd(g, C) != 1:
+            print('correct guess')
+            return(gcd(g, C), C // gcd(g, C))
+        D = gateOperations(C, L, M, g)
+        # print(D.todense())
+        # exit()
+        psi = D @ psi
+        # print(psi)
+        # exit()8
+        qft = QFT(N, L)
+        psi = qft @ psi
+        # print(psi)
+        # exit()
+        p = measurement(N, psi, L, g, C)
+        if type(p) != int:
+            continue
         print(p)
-        if g**p % C == 1 and p % 2 == 0:
-            x = gcd(C, g**(p // 2) + 1)
-            y = gcd(C, g**(p // 2) - 1)
+        # print(g**p % C)
+        # exit()
+        if p % 2 == 0:
+            x = gcd(C, g ** (p // 2) + 1)
+            y = gcd(C, g ** (p // 2) - 1)
+            print(x, y)
             if x * y == C and (x != 1 and y != 1):
                 return(x, y)
-        else:
-            QunatumShor(C)
 
 
 # print(gcd(18,4))
@@ -265,10 +281,10 @@ if __name__ == '__main__':
     # print(time.time() - t0)
 
     # t0 = time.time()
-    factors = QunatumShor(15)
+    factors = QunatumShor(39)
     print(factors)
     # print(time.time() - t0)
-    # print(frac(0.58))
+    # print(frac(0.623))
     # print(Fraction(0.58).limit_denominator())
     # gateOperations(39,11,6,15)
 
