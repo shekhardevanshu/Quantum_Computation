@@ -8,27 +8,33 @@ from cmath import exp, pi
 import numpy as np
 from scipy.sparse import coo_matrix
 
+
 class QGates():
     def __init__(self, N):
-        self.n = N  #total number of qubits    
-        self.I = np.identity(2) #identity matrix
-        self.H =  np.matrix("1,1;1,-1")/sqrt(2) #Hadamard gate
-        self.NOT =  np.matrix("0,1;1,0") #NOT gate
+        self.n = N  # total number of qubits
+        self.I = np.identity(2)  # identity matrix
+        self.H = np.matrix("1,1;1,-1")/sqrt(2)  # Hadamard gate
+        self.NOT = np.matrix("0,1;1,0")  # NOT gate
         self.CNOT = np.matrix("1 0 0 0;0 1 0 0;0 0 0 1;0 0 1 0")
         # self.Zeros = np.zeros((2,2))
 
-    def delta(self,i,j):
-        if i == j: return(1)
-        else: return(0)
+    def delta(self, i, j):
+        if i == j:
+            return(1)
+        else:
+            return(0)
 
     def tensorMult(self, M, a, dtype):
         n = self.n
         N = 2 ** n
-        col = []; row = []; data = []
+        col = []
+        row = []
+        data = []
         for i in range(N):
             # l = []
             ls = [i]
-            if i + (2 ** (n - a)) < N:  ls.append(i + (2 ** (n - a)))
+            if i + (2 ** (n - a)) < N:
+                ls.append(i + (2 ** (n - a)))
             for j in ls:
                 # x,y = int2bin(n, i), int2bin(n, j)
                 x, y, z = i, j, i ^ j
@@ -38,10 +44,11 @@ class QGates():
 
                 for c in range(1, n + 1):
                     if c != a:
-                    # print(d, m)
+                        # print(d, m)
                         d = (z >> n-c) & 1
                         m *= int(not d)
-                        if d == 1: break
+                        if d == 1:
+                            break
                 if m != 0:
                     row.append(i)
                     col.append(j)
@@ -50,47 +57,50 @@ class QGates():
                         row.append(j)
                         col.append(i)
                         data.append(m)
-        genM = coo_matrix((data, (row, col)), shape=(N, N)) #sparse matrix implementation
+        genM = coo_matrix((data, (row, col)), shape=(N, N))  # sparse matrix implementation
         return genM
 
     def Hadamard(self, i):
         return(self.tensorMult(self.H, i, dtype=float))
 
-    def phase(self,theta, i=1, Rth = True):    #theta is taken as the multiple of pi
+    def phase(self, theta, i=1, Rth=True):  # theta is taken as the multiple of pi
         # Remember: non-default argument(theta) mustn't follow default arguments(i,Rth)
         eitheta = exp(1j*(theta*pi))
         # if round(eitheta.imag, 5) == 0: e = eitheta.real
         # elif round(eitheta.real, 5) == 0: e = eitheta.imag
         # else: e = complex(round(eitheta.real, 5), round(eitheta.imag, 5))
         e = complex(round(eitheta.real, 5), round(eitheta.imag, 5))
-        
+
         Rtheta = np.matrix([[1, 0], [0, e]])
         if Rth == True:
             return(Rtheta)
         else:
-            return(self.tensorMult(Rtheta,i, dtype=complex))
+            return(self.tensorMult(Rtheta, i, dtype=complex))
+
     def Cgate(self, M):
-        return( np.matrix([ [1, 0, 0, 0], [0, 1, 0, 0], [0, 0, M[0,0], M[0,1]], [0, 0, M[1,0],M[1,1]] ]) )
+        return(np.matrix([[1, 0, 0, 0], [0, 1, 0, 0], [0, 0, M[0, 0], M[0, 1]], [0, 0, M[1, 0], M[1, 1]]]))
 
 
-def int2bin(N,n):
+def int2bin(N, n):
     # print(N)
     l = [0]*N
     i = N
-    
+
     while(True):
         # print(i,N)
-        l[i-1] = n%2
+        l[i-1] = n % 2
         n = n//2
         i -= 1
-        if n == 0: break
-    l = list(map(str,l))
+        if n == 0:
+            break
+    l = list(map(str, l))
     return(''.join(l))
+
 
 def initialize():
     N = int(input("Number of qubits: "))
     # N = 2
-    
+
     numBasis = 2**N
     psiOrig = list(map(float, input("Enter {0} coefficients of the state: ".format(numBasis)).rstrip().split()))
     if not any(psiOrig):
@@ -100,21 +110,22 @@ def initialize():
     psiOrig = list(map(lambda x: x / norm, psiOrig))
     return(np.asmatrix(psiOrig).transpose(), N)
 
+
 def measurement(psiOrig, N):
 
     # N = int(log(len(psiOrig))/log(2))
     psi = list(psiOrig)
 
     while True:
-        r = round(random.random(),5)
+        r = round(random.random(), 5)
         q = abs(psi[0])**2
-        for j in range(0,len(psi)):           
-            if j == len(psi)-1:  
+        for j in range(0, len(psi)):
+            if j == len(psi)-1:
                 # collapsedState.append('|'+f'{j:0{N}b}'+'>')
                 print('|'+f'{j:0{N}b}'+'>\n')
                 state = j
                 break
-            elif r <= q:               
+            elif r <= q:
                 # collapsedState.append('|'+f'{j:0{N}b}'+'>')
                 print('|'+f'{j:0{N}b}'+">\n")
                 state = j
@@ -127,12 +138,14 @@ def measurement(psiOrig, N):
             psi[state] = 1
         elif inp == 2:
             psi = list(psiOrig)
-        else: break
+        else:
+            break
 
-def genCGate(N,M,a,b):
+
+def CHGate(N, a, b):
     NN = 2**N
     gate = QGates(N)
-    Cgate = gate.Cgate(M)
+    Cgate = gate.Cgate(gate.H)
     # print(Cgate)
     genCgate = []
     row, col, data = [], [], []
@@ -144,24 +157,116 @@ def genCGate(N,M,a,b):
             y, z = j, i ^ j
             # print(z)
             # print(a-1, b-1)
-            # l.append(Cgate[int(x[a-1]+x[b-1], 2), int(y[a-1]+y[b-1], 2)])    
+            # l.append(Cgate[int(x[a-1]+x[b-1], 2), int(y[a-1]+y[b-1], 2)])
             b_y1, b_y2 = (y >> N-a) & 1, (y >> N-b) & 1
             m = Cgate[int(str(b_x1)+str(b_x2), 2), int(str(b_y1)+str(b_y2), 2)]
             # print(m, i, j)
             for p in range(1, N+1):
-                
+
                 if p != a and p != b:
                     # print(d, m)
                     # print('delta')
                     d = (z >> N-p) & 1
                     m *= int(not d)
-                    if d == 1: break
+                    if d == 1:
+                        break
                 # z >>= 1
             if m != 0:
                 row.append(i)
                 col.append(j)
                 data.append(m)
-            #by symmetric property
+            # by symmetric property
+                if i != j:
+                    row.append(j)
+                    col.append(i)
+                    data.append(m)
+                # print(i, j, m)
+                # break
+        # genCgate.append(l)
+    genCgate = coo_matrix((data, (row, col)), shape=(NN, NN))
+    return genCgate
+
+
+def CphaseGate(N, P, a, b):
+    NN = 2**N
+    gate = QGates(N)
+    Cgate = gate.Cgate(P)
+    # print(Cgate)
+    genCgate = []
+    row, col, data = [], [], []
+    for i in range(NN):
+        x = i
+        b_x1, b_x2 = (x >> N-a) & 1, (x >> N-b) & 1
+        # for j in range(i, NN):
+        j = i  # for phase gate only diagonal elements are non-zero
+        # x, y = int2bin(N,i), int2bin(N,j)
+        y, z = j, i ^ j
+    # print(z)
+    # print(a-1, b-1)
+    # l.append(Cgate[int(x[a-1]+x[b-1], 2), int(y[a-1]+y[b-1], 2)])
+        b_y1, b_y2 = (y >> N-a) & 1, (y >> N-b) & 1
+        m = Cgate[int(str(b_x1)+str(b_x2), 2), int(str(b_y1)+str(b_y2), 2)]
+        # print(m, i, j)
+        for p in range(1, N+1):
+
+            if p != a and p != b:
+                # print(d, m)
+                # print('delta')
+                d = (z >> N-p) & 1
+                m *= int(not d)
+                if d == 1:
+                    break
+            # z >>= 1
+        if m != 0:
+            row.append(i)
+            col.append(j)
+            data.append(m)
+    # by symmetric property
+            if i != j:
+                row.append(j)
+                col.append(i)
+                data.append(m)
+        # print(i, j, m)
+        # break
+    # genCgate.append(l)
+    genCgate = coo_matrix((data, (row, col)), shape=(NN, NN))
+    return genCgate
+
+
+def CnotGate(N, a, b):
+    NN = 2**N
+    gate = QGates(N)
+    Cgate = gate.Cgate(gate.NOT)
+    # print(Cgate)
+    genCgate = []
+    row, col, data = [], [], []
+    for i in range(NN):
+        x = i
+        b_x1, b_x2 = (x >> N-a) & 1, (x >> N-b) & 1
+        for j in range(i, NN):
+            # x, y = int2bin(N,i), int2bin(N,j)
+            y, z = j, i ^ j
+            # print(z)
+            # print(a-1, b-1)
+            # l.append(Cgate[int(x[a-1]+x[b-1], 2), int(y[a-1]+y[b-1], 2)])
+            b_y1, b_y2 = (y >> N-a) & 1, (y >> N-b) & 1
+            m = Cgate[int(str(b_x1)+str(b_x2), 2), int(str(b_y1)+str(b_y2), 2)]
+            # print(m, i, j)
+            for p in range(1, N+1):
+
+                if p != a and p != b:
+                    # print(d, m)
+                    # print('delta')
+                    d = (z >> N-p) & 1
+                    m *= int(not d)
+                    if d == 1:
+                        break
+                # z >>= 1
+            if m != 0:
+                row.append(i)
+                col.append(j)
+                data.append(m)
+            # by symmetric property
                 if i != j:
                     row.append(j)
                     col.append(i)
@@ -172,16 +277,18 @@ def genCGate(N,M,a,b):
     genCgate = coo_matrix((data, (row, col)), shape=(NN, NN))
     return genCgate
 
+
 def fullQuntumComp():
-    #intialization
+    # intialization
     psi, N = initialize()
     psi = np.matrix(psi).transpose()
 
-    #gates
+    # gates
     gate = QGates(N)
     while True:
         g = int(input("Select gate:\n 1. Hadamard gate\n2. Phase shift gate\n3.Done\n"))
-        if g == 3: break
+        if g == 3:
+            break
         i = int(input("apply on qubit: "))
         if g == 1:
             psi = np.matmul(gate.Hadamard(i), psi)
@@ -189,9 +296,10 @@ def fullQuntumComp():
             # print(psi)
         elif g == 2:
             theta = int(input("Enter theta in multiples of pi: "))
-            psi = np.matmul(gate.phase(i,theta), psi)
+            psi = np.matmul(gate.phase(i, theta), psi)
 
     measurement(psi, N)
+
 
 def QuantuMeasure(N, psi, numMeas):
     # psi, N = initialize()
@@ -204,30 +312,30 @@ def QuantuMeasure(N, psi, numMeas):
 
     for _ in range(numMeas):
         r = random.random()
-        q = abs(psi[0,0])**2
-        
-        for j in range(len(psi)): 
-            # print(q)    
-            if j == len(psi)-1:  
+        q = abs(psi[0, 0])**2
+
+        for j in range(len(psi)):
+            # print(q, r)
+            if j == len(psi)-1:
                 # print(j)
-                collapsedState.append('|'+f'{j:0{N}b}'+'>') #simplified using f string
+                collapsedState.append('|'+f'{j:0{N}b}'+'>')  # simplified using f string
                 # print('|'+f'{j:0{N}b}'+'>\n')
+                # print(q, r)
                 break
-            elif r <= q:    
-                # print(j)         
+            elif r < q:
+                # print(j)
                 collapsedState.append('|'+f'{j:0{N}b}'+'>')
                 # print('|'+f'{j:0{N}b}'+">\n")
                 break
             q += abs(psi[j+1, 0])**2
+            # print(r, q)
+
     return(collapsedState)
     # for st in collapsedState:
-        # cnt[st] = cnt.get(st, 0) + 1
+    # cnt[st] = cnt.get(st, 0) + 1
     # print(cnt)
     # plt.hist(cnt)
     # plt.show()
-
-
-
 
 
 if __name__ == '__main__':
@@ -238,15 +346,18 @@ if __name__ == '__main__':
     # print(np.shape(psi))
     # measurement(psi)
     gate = QGates(3)
+    # print(CnotGate(2, 2, 1))
     p = gate.phase(0.5)
-    print(gate.phase(0.5, 3, False))
+    # n = gate.NOT
+    # print(gate.phase(0.5, 3, False))
+    print(CphaseGate(3, p, 2, 3))
     # print(coo_matrix(gate.Cgate(h)))
     # print(genCGate(2, h, 1, 2))
     # for i in h:
     #     for j in i:
     #         print(j , end=" ")
     #     print()
-    # print(gate.CNOT[0,0])
+    # print(CnotGate(3, 2, 3))
     # N = gate.phase(theta = 1)
     # print(N)
     # M = gate.NOT
